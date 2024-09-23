@@ -164,7 +164,7 @@ def extract_street_name(address):
         return None
 
     # Step 1: Remove the unit number
-    address_without_unit = remove_unit_number(normalized)
+    address_without_unit = remove_unit_number(address)
 
     # Step 2: Extract and remove the street number
     street_number = extract_street_number(address_without_unit)
