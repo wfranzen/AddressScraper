@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="address_scraper",
+    name="addressScraper",
     version="0.1.0",
     author="Will Franzen",
     author_email="willfranzen@gmail.com",
@@ -9,7 +9,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/wfranzen/AddressScraper",
-    packages=find_packages(),
+    packages=find_packages(include=["*"]),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
