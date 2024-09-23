@@ -22,7 +22,7 @@ def normalize_address(address):
     edge_case_found = check_for_edge_cases(address, normalized)
 
     # Move misplaced unit identifiers (like "STE", "UNIT") to the end of the address
-    unit_identifiers = r'(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER) \d+[A-Z]?\b'
+    unit_identifiers = r'(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC) \d+[A-Z]?\b'
     match = re.search(unit_identifiers, normalized)
     if match:
         unit_str = match.group()
@@ -53,7 +53,7 @@ def check_for_edge_cases(address, normalized):
     normalized = normalized.upper()
     
     # Check if a unit identifier exists
-    unit_match = re.search(r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER)\b', normalized)
+    unit_match = re.search(r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC)\b', normalized)
 
     if unit_match:
         unit_identifier_position = unit_match.end()
@@ -84,14 +84,14 @@ def extract_unit_number(address):
     normalized = address.upper().strip()
 
     # List of patterns to ignore (Highway, State Road, County Road)
-    ignore_patterns = r'(US HIGHWAY|STATE ROAD|COUNTY ROAD|PO BOX) \d+'
+    ignore_patterns = r'(US HIGHWAY|STATE ROAD|COUNTY ROAD|PO BOX|STATE ROUTE) \d+'
 
     # Remove highway/state/county road patterns
     normalized = re.sub(ignore_patterns, '', normalized)
 
     # Regex patterns to match common unit number formats with identifiers
     unit_patterns = [
-        r'(UNIT|APT|STE|SUITE|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER)\s*[#\dA-Z\-]+',  # Matches unit identifier followed by number/letter
+        r'(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC)\s*[#\dA-Z\-]+',  # Matches unit identifier followed by number/letter
     ]
 
     # Check for common unit identifiers first (APT, UNIT, etc.)
