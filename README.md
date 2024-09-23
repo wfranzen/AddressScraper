@@ -13,4 +13,4 @@ The Address Parser is a Python library designed to normalize addresses and extra
 You can install this library directly from GitHub:
 
 ```bash
-pip install git+https://github.com/yourusername/address-parser.git
+pip install git+https://github.com/wfranzen/address-parser.git
