@@ -1,4 +1,5 @@
 import re
+from street_suffix_mapping import street_suffix_mapping
 
 def normalize_address(address):
     """
@@ -29,6 +30,12 @@ def normalize_address(address):
 
     # Handle intersections (preserve or convert '&' to 'AND')
     normalized = re.sub(r'\s*&\s*', ' AND ', normalized)
+
+    # Standardize direction abbreviations using the provided direction_mapping
+    normalized = standardize_directions(normalized, direction_mapping)
+
+    # Replace the street suffix with the USPS standard abbreviation
+    normalized, street_type = replace_street_suffix(normalized, street_suffix_mapping)
 
     # Remove multiple spaces and reduce them to a single space
     normalized = re.sub(r'\s+', ' ', normalized)
@@ -164,6 +171,75 @@ def extract_street_name(address):
         return address_without_number
 
     return address_without_unit
+
+direction_mapping = {
+    "NORTH": "N",
+    "SOUTH": "S",
+    "EAST": "E",
+    "WEST": "W",
+    "NORTHEAST": "NE",
+    "NORTHWEST": "NW",
+    "SOUTHEAST": "SE",
+    "SOUTHWEST": "SW",
+    "N": "N",
+    "S": "S",
+    "E": "E",
+    "W": "W",
+    "NE": "NE",
+    "NW": "NW",
+    "SE": "SE",
+    "SW": "SW"
+}
+
+def standardize_directions(address, direction_mapping):
+    """
+    Given an address, standardize the directional components to USPS standard abbreviations.
+    
+    Parameters:
+        address (str): The address to process.
+        direction_mapping (dict): A dictionary mapping direction names and abbreviations to USPS standards.
+    
+    Returns:
+        str: The address with standardized direction abbreviations.
+    """
+    if not isinstance(address, str):
+        return address
+
+    # Split the address into components
+    address_parts = address.strip().upper().split()
+
+    # Iterate over the address components to replace any directions
+    standardized_parts = [direction_mapping.get(part, part) for part in address_parts]
+
+    # Reconstruct the address
+    return ' '.join(standardized_parts)
+
+# Test the function with some example addresses
+test_addresses = [
+    "123 North Maple Street",  # Should convert "North" to "N"
+    "456 South Elm St",        # Should convert "South" to "S"
+    "789 East Pine Ave",       # Should convert "East" to "E"
+    "101 West Cedar Blvd",     # Should convert "West" to "W"
+    "350 NE Liberty Avenue",   # Should remain "NE"
+    "400 Northwest Oak Road",  # Should convert "Northwest" to "NW"
+]
+
+def replace_street_suffix(address, suffix_mapping):
+    """
+    Given an address, replace the street suffix or abbreviation with the USPS standard abbreviation.
+    """
+    if not isinstance(address, str):
+        return address, None
+
+    address_parts = address.strip().upper().split()
+    for i in range(len(address_parts) - 1, -1, -1):
+        part = address_parts[i]
+        if part in suffix_mapping:
+            address_parts[i] = suffix_mapping[part]
+            return ' '.join(address_parts), suffix_mapping[part]
+
+    return address, None
+
 
 def parse_address(address):
     """
