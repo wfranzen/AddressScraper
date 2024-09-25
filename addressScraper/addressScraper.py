@@ -5,6 +5,12 @@ def normalize_address(address, warningsEnabled=False):
     """
     Normalize an address by ensuring it is a string, converting to uppercase,
     removing extra spaces, unnecessary special characters, and stripping it.
+
+    Parameters:
+        address (str): The address to process.
+        warningsEnabled (bool): A flag to enable warnings for common edge cases.
+
+    Ex: 1234 Main Street, Unit 5 -> 1234 MAIN ST UNIT 5
     """
     if not isinstance(address, str):
         return None
@@ -22,7 +28,7 @@ def normalize_address(address, warningsEnabled=False):
     normalized = re.sub(r'[^\w\s-]', '', normalized)
 
     # Check for common edge cases and print warnings
-    edge_case_found = check_for_edge_cases(address, normalized, warningsEnabled)
+    edge_case_found = _check_for_edge_cases(address, normalized, warningsEnabled)
 
     # Define unit identifiers for checking
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
@@ -40,23 +46,23 @@ def normalize_address(address, warningsEnabled=False):
         normalized = f"{normalized} {unit_str}".strip()
 
     # Standardize direction abbreviations using the provided direction_mapping
-    normalized = standardize_directions(normalized, direction_mapping)
+    normalized = _standardize_directions(normalized, _direction_mapping)
 
     # Replace the street suffix with the USPS standard abbreviation
-    normalized, _ = replace_street_suffix(normalized, street_suffix_mapping)
+    normalized, _ = _replace_street_suffix(normalized, street_suffix_mapping)
 
     # Remove multiple spaces and reduce them to a single space
     normalized = re.sub(r'\s+', ' ', normalized)
 
     # Check for common edge cases and print warnings
     if not edge_case_found:
-        check_for_edge_cases(address, normalized, warningsEnabled)
+        _check_for_edge_cases(address, normalized, warningsEnabled)
 
     return normalized if normalized else None
 
 
 
-def check_for_edge_cases(address, normalized, warningsEnabled=False):
+def _check_for_edge_cases(address, normalized, warningsEnabled=False):
     """
     Check for formatting issues related to unit identifiers, such as:
     - Duplicate unit identifiers in the address.
@@ -99,7 +105,7 @@ def check_for_edge_cases(address, normalized, warningsEnabled=False):
 
     return False
 
-def extract_unit_number(address):
+def _extract_unit(address):
     """
     Extract the unit number from an address if it exists.
     """
@@ -135,7 +141,7 @@ def extract_unit_number(address):
     return None
 
 
-def remove_unit_number(address):
+def _remove_unit_number(address):
     """
     Remove the unit number from a normalized address if it exists.
     """
@@ -143,7 +149,7 @@ def remove_unit_number(address):
         return address
 
     # Extract the unit number using the previously defined function
-    unit_number = extract_unit_number(address)
+    unit_number = _extract_unit(address)
 
     if unit_number:
         address_without_unit = address.replace(unit_number, '').strip()
@@ -152,7 +158,7 @@ def remove_unit_number(address):
     
     return address
 
-def extract_street_number(address):
+def _extract_street_number(address):
     """
     Extract the street number from an address.
     """
@@ -167,15 +173,15 @@ def extract_street_number(address):
 
     return None
 
-def extract_street_name(address):
+def _extract_street_name(address):
     """
     Extract the street name from a normalized address.
     """
     if not isinstance(address, str):
         return None
 
-    address_without_unit = remove_unit_number(address)
-    street_number = extract_street_number(address_without_unit)
+    address_without_unit = _remove_unit_number(address)
+    street_number = _extract_street_number(address_without_unit)
     
     if street_number:
         address_without_number = address_without_unit.replace(street_number, '', 1).strip()
@@ -184,7 +190,7 @@ def extract_street_name(address):
 
     return address_without_unit
 
-direction_mapping = {
+_direction_mapping = {
     "NORTH": "N",
     "SOUTH": "S",
     "EAST": "E",
@@ -203,7 +209,7 @@ direction_mapping = {
     "SW": "SW"
 }
 
-def standardize_directions(address, direction_mapping):
+def _standardize_directions(address, _direction_mapping):
     """
     Given an address, standardize the directional components to USPS standard abbreviations.
     
@@ -221,12 +227,12 @@ def standardize_directions(address, direction_mapping):
     address_parts = address.strip().upper().split()
 
     # Iterate over the address components to replace any directions
-    standardized_parts = [direction_mapping.get(part, part) for part in address_parts]
+    standardized_parts = [_direction_mapping.get(part, part) for part in address_parts]
 
     # Reconstruct the address
     return ' '.join(standardized_parts)
 
-def replace_street_suffix(address, suffix_mapping):
+def _replace_street_suffix(address, suffix_mapping):
     """
     Given an address, replace the street suffix or abbreviation with the USPS standard abbreviation.
     """
@@ -244,16 +250,16 @@ def replace_street_suffix(address, suffix_mapping):
 
 def parse_address(address, warningsEnabled=False):
     """
-    Given an address, return the raw address, normalized address, unit number, address without the unit,
+    Given an address, return the normalized address, unit number, address without the unit,
     street number, street without the number, street type, and a flag indicating if the address is complete.
     Optionally, warnings can be enabled to print common edge cases encountered with warningsEnabled=True.
     """
     normalized = normalize_address(address, warningsEnabled)
-    unit_number = extract_unit_number(normalized)
-    address_without_unit = remove_unit_number(normalized)
-    street_number = extract_street_number(address_without_unit)
-    street_name = extract_street_name(address_without_unit)
-    street_type = replace_street_suffix(address_without_unit, street_suffix_mapping)
+    unit_number = _extract_unit(normalized)
+    address_without_unit = _remove_unit_number(normalized)
+    street_number = _extract_street_number(address_without_unit)
+    street_name = _extract_street_name(address_without_unit)
+    street_type = _replace_street_suffix(address_without_unit, street_suffix_mapping)
     
     return {
         "address": normalized,
@@ -264,3 +270,53 @@ def parse_address(address, warningsEnabled=False):
         "streetType": street_type[1],
         "isComplete": all([normalized, street_number, street_name])
     }
+
+def unitNumber(address):
+    """
+    Extract the unit number from an address if it exists.
+
+    Ex: 1234 Main Street, Unit 5 -> Unit 5
+    """
+    return _extract_unit(normalize_address(address))
+
+def streetNumber(address):
+    """
+    Extract the street number from an address.
+
+    Ex: 1234 Main Street, Unit 5 -> 1234
+    """
+    return _extract_street_number(normalize_address(address))
+
+def streetName(address):
+    """
+    Extract the street from an address.
+
+    Ex: 1234 Main St, Unit 5 -> Main St
+    """
+    return _extract_street_name(normalize_address(address))
+
+def removeUnit(address):
+    """
+    Remove the unit number from an address if it exists.
+
+    Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
+    """
+    return _remove_unit_number(normalize_address(address))
+
+def streetType(address):
+    """
+    Extract the street type from an address.
+
+    Ex: 1234 Main St, Unit 5 -> St
+    """
+    normalized_address = normalize_address(address)
+    return _replace_street_suffix(normalized_address, street_suffix_mapping)[1]
+
+def isComplete(address):
+    """
+    Check if the address is complete by ensuring it has a street number, street name, and normalized address.
+    
+    Ex: 1234 Main Street, Unit 5 -> True
+    """
+    parsed_address = parse_address(address)
+    return parsed_address["isComplete"]
