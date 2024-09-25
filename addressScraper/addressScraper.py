@@ -1,7 +1,7 @@
 import re
 from .street_suffix_mapping import street_suffix_mapping
 
-def normalize_address(address):
+def normalize_address(address, warningsEnabled=False):
     """
     Normalize an address by ensuring it is a string, converting to uppercase,
     removing extra spaces, unnecessary special characters, and stripping it.
@@ -22,7 +22,7 @@ def normalize_address(address):
     normalized = re.sub(r'[^\w\s-]', '', normalized)
 
     # Check for common edge cases and print warnings
-    edge_case_found = check_for_edge_cases(address, normalized)
+    edge_case_found = check_for_edge_cases(address, normalized, warningsEnabled)
 
     # Define unit identifiers for checking
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
@@ -50,7 +50,7 @@ def normalize_address(address):
 
     # Check for common edge cases and print warnings
     if not edge_case_found:
-        check_for_edge_cases(address, normalized)
+        check_for_edge_cases(address, normalized, warningsEnabled)
 
     return normalized if normalized else None
 
@@ -248,7 +248,7 @@ def parse_address(address, warningsEnabled=False):
     street number, street without the number, street type, and a flag indicating if the address is complete.
     Optionally, warnings can be enabled to print common edge cases encountered with warningsEnabled=True.
     """
-    normalized = normalize_address(address)
+    normalized = normalize_address(address, warningsEnabled)
     unit_number = extract_unit_number(normalized)
     address_without_unit = remove_unit_number(normalized)
     street_number = extract_street_number(address_without_unit)
