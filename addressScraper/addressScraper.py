@@ -15,27 +15,35 @@ def normalize_address(address):
     # Preserve numeric ranges (e.g., 123-125)
     normalized = re.sub(r'(\d+)\s*-\s*(\d+)', r'\1-\2', normalized)
 
+    # Handle intersections (preserve or convert '&' to 'AND')
+    normalized = re.sub(r'\s*&\s*', ' AND ', normalized)
+
     # Remove all leading/trailing # symbols and unnecessary special characters
     normalized = re.sub(r'[^\w\s-]', '', normalized)
 
     # Check for common edge cases and print warnings
     edge_case_found = check_for_edge_cases(address, normalized)
 
-    # Adjust the unit identifier regex to include 'PH' and enforce exact matches
+    # Define unit identifiers for checking
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
     
     # Add a space between unit identifiers and the following numbers if missing (e.g., 'PH2-20' -> 'PH 2-20')
-    # Ensure we match only when there's a digit directly following the identifier
     normalized = re.sub(r'(' + unit_identifiers + r')(?=\d)', r'\1 ', normalized)
 
-    # Handle intersections (preserve or convert '&' to 'AND')
-    normalized = re.sub(r'\s*&\s*', ' AND ', normalized)
+    # Search for the first occurrence of a unit identifier with its unit number
+    match = re.search(unit_identifiers + r'\s*\d+[A-Z-]*', normalized)
+    if match:
+        unit_str = match.group()
+        # Remove the unit string from the current position
+        normalized = re.sub(unit_identifiers + r'\s*\d+[A-Z-]*', '', normalized).strip()
+        # Add the unit string to the end of the address
+        normalized = f"{normalized} {unit_str}".strip()
 
     # Standardize direction abbreviations using the provided direction_mapping
     normalized = standardize_directions(normalized, direction_mapping)
 
     # Replace the street suffix with the USPS standard abbreviation
-    normalized, street_type = replace_street_suffix(normalized, street_suffix_mapping)
+    normalized, _ = replace_street_suffix(normalized, street_suffix_mapping)
 
     # Remove multiple spaces and reduce them to a single space
     normalized = re.sub(r'\s+', ' ', normalized)
@@ -44,7 +52,8 @@ def normalize_address(address):
     if not edge_case_found:
         check_for_edge_cases(address, normalized)
 
-    return normalized
+    return normalized if normalized else None
+
 
 
 def check_for_edge_cases(address, normalized):
@@ -98,7 +107,7 @@ def extract_unit_number(address):
     normalized = address.upper().strip()
 
     # List of patterns to ignore (Highway, State Road, County Road)
-    ignore_patterns = r'(US HIGHWAY|STATE ROAD|COUNTY ROAD|PO BOX|STATE ROUTE) \d+'
+    ignore_patterns = r'(US HIGHWAY|STATE ROAD|COUNTY ROAD|PO BOX|STATE ROUTE|HWY) \d+'
     normalized = re.sub(ignore_patterns, '', normalized)
 
     # Regex patterns to match common unit number formats with exact identifiers
@@ -214,16 +223,6 @@ def standardize_directions(address, direction_mapping):
     # Reconstruct the address
     return ' '.join(standardized_parts)
 
-# Test the function with some example addresses
-test_addresses = [
-    "123 North Maple Street",  # Should convert "North" to "N"
-    "456 South Elm St",        # Should convert "South" to "S"
-    "789 East Pine Ave",       # Should convert "East" to "E"
-    "101 West Cedar Blvd",     # Should convert "West" to "W"
-    "350 NE Liberty Avenue",   # Should remain "NE"
-    "400 Northwest Oak Road",  # Should convert "Northwest" to "NW"
-]
-
 def replace_street_suffix(address, suffix_mapping):
     """
     Given an address, replace the street suffix or abbreviation with the USPS standard abbreviation.
@@ -240,7 +239,6 @@ def replace_street_suffix(address, suffix_mapping):
 
     return address, None
 
-
 def parse_address(address):
     """
     Given an address, return the normalized address, unit number, address without the unit,
@@ -251,24 +249,15 @@ def parse_address(address):
     address_without_unit = remove_unit_number(normalized)
     street_number = extract_street_number(address_without_unit)
     street_name = extract_street_name(address_without_unit)
+    street_type = replace_street_suffix(address_without_unit, street_suffix_mapping)
     
     return {
+        "rawAddress": address,
         "address": normalized,
         "unitNumber": unit_number,
         "addressNoUnit": address_without_unit,
         "streetNumber": street_number,
-        "streetName": street_name
+        "streetName": street_name,
+        "streetType": street_type[1],
+        "isComplete": all([normalized, street_number, street_name])
     }
-
-# Test Cases
-test_addresses = [
-    "460 L ST NW G1-205",
-    "55 M ST NE PH 2-20 PH2-20",
-    "2030 F ST NW",
-    "4106 GAULT PL NE P-5",
-    "1201 O ST NW APT 1A",
-    "FIRTH STERLING AVE SE"
-]
-
-for address in test_addresses:
-    print(parse_address(address))
