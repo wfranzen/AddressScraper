@@ -1,7 +1,7 @@
 import re
 from .street_suffix_mapping import street_suffix_mapping
 
-def normalize_address(address, warningsEnabled=False):
+def clean_address(address, warningsEnabled=False):
     """
     Normalize an address by ensuring it is a string, converting to uppercase,
     removing extra spaces, unnecessary special characters, and stripping it.
@@ -254,7 +254,7 @@ def parse_address(address, warningsEnabled=False):
     street number, street without the number, street type, and a flag indicating if the address is complete.
     Optionally, warnings can be enabled to print common edge cases encountered with warningsEnabled=True.
     """
-    normalized = normalize_address(address, warningsEnabled)
+    normalized = clean_address(address, warningsEnabled)
     unit_number = _extract_unit(normalized)
     address_without_unit = _remove_unit_number(normalized)
     street_number = _extract_street_number(address_without_unit)
@@ -271,48 +271,48 @@ def parse_address(address, warningsEnabled=False):
         "isComplete": all([normalized, street_number, street_name])
     }
 
-def unitNumber(address):
+def unit_number(address):
     """
     Extract the unit number from an address if it exists.
 
     Ex: 1234 Main Street, Unit 5 -> Unit 5
     """
-    return _extract_unit(normalize_address(address))
+    return _extract_unit(clean_address(address))
 
-def streetNumber(address):
+def street_number(address):
     """
     Extract the street number from an address.
 
     Ex: 1234 Main Street, Unit 5 -> 1234
     """
-    return _extract_street_number(normalize_address(address))
+    return _extract_street_number(clean_address(address))
 
-def streetName(address):
+def street_name(address):
     """
     Extract the street from an address.
 
     Ex: 1234 Main St, Unit 5 -> Main St
     """
-    return _extract_street_name(normalize_address(address))
+    return _extract_street_name(clean_address(address))
 
-def removeUnit(address):
-    """
-    Remove the unit number from an address if it exists.
-
-    Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
-    """
-    return _remove_unit_number(normalize_address(address))
-
-def streetType(address):
+def street_type(address):
     """
     Extract the street type from an address.
 
     Ex: 1234 Main St, Unit 5 -> St
     """
-    normalized_address = normalize_address(address)
+    normalized_address = clean_address(address)
     return _replace_street_suffix(normalized_address, street_suffix_mapping)[1]
 
-def isComplete(address):
+def remove_unit(address):
+    """
+    Remove the unit number from an address if it exists.
+
+    Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
+    """
+    return _remove_unit_number(clean_address(address))
+
+def is_complete(address):
     """
     Check if the address is complete by ensuring it has a street number, street name, and normalized address.
     

@@ -1,8 +1,10 @@
 from .addressScraper import (
     normalize_address,
-    extract_unit_number,
-    remove_unit_number,
-    extract_street_number,
-    extract_street_name,
     parse_address,
+    unit_number,
+    street_number,
+    street_name,
+    street_type,
+    remove_unit,
+    is_complete
 )
