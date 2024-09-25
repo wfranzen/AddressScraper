@@ -1,5 +1,5 @@
 import re
-from street_suffix_mapping import street_suffix_mapping
+from .street_suffix_mapping import street_suffix_mapping
 
 def normalize_address(address):
     """
@@ -241,8 +241,8 @@ def replace_street_suffix(address, suffix_mapping):
 
 def parse_address(address):
     """
-    Given an address, return the normalized address, unit number, address without the unit,
-    street number, and street name.
+    Given an address, return the raw address, normalized address, unit number, address without the unit,
+    street number, street without the number, street type, and a flag indicating if the address is complete.
     """
     normalized = normalize_address(address)
     unit_number = extract_unit_number(normalized)
@@ -252,7 +252,6 @@ def parse_address(address):
     street_type = replace_street_suffix(address_without_unit, street_suffix_mapping)
     
     return {
-        "rawAddress": address,
         "address": normalized,
         "unitNumber": unit_number,
         "addressNoUnit": address_without_unit,
