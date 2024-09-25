@@ -56,7 +56,7 @@ def normalize_address(address):
 
 
 
-def check_for_edge_cases(address, normalized):
+def check_for_edge_cases(address, normalized, warningsEnabled=False):
     """
     Check for formatting issues related to unit identifiers, such as:
     - Duplicate unit identifiers in the address.
@@ -64,6 +64,9 @@ def check_for_edge_cases(address, normalized):
     - Unit identifier with no valid number or letter following it.
     - Unit identifier having both a number before and after it, indicating incorrect ordering.
     """
+    if not warningsEnabled:
+        return False
+
     # Ensure the address is in uppercase for consistency
     normalized = normalized.upper()
     
@@ -73,7 +76,7 @@ def check_for_edge_cases(address, normalized):
     # Check for duplicate unit identifiers
     all_matches = re.findall(unit_identifiers, normalized)
     if len(all_matches) > 1:
-        print(f"Warning: The address '{address}' contains duplicate unit identifiers. Review: '{normalized}'")
+        print(f"Warning: The raw address '{address}' contains duplicate unit identifiers. Review: '{normalized}'")
         return True
 
     # Check if a unit identifier exists
@@ -83,7 +86,7 @@ def check_for_edge_cases(address, normalized):
 
         # Check if there's no valid number or letter following the unit identifier
         if not re.search(r'[A-Z0-9]', normalized[unit_identifier_position:].strip()):
-            print(f"Warning: The address '{address}' contains a unit identifier but may be missing a valid unit after it. Review: '{address}'")
+            print(f"Warning: The raw address '{address}' contains a unit identifier but may be missing a valid unit after it. Review: '{normalized}'")
             return True
 
         # Check if there's a number both before and after the unit identifier
@@ -91,7 +94,7 @@ def check_for_edge_cases(address, normalized):
         post_unit_number_match = re.search(r'(?<=' + unit_match.group() + r')\s*\d+[A-Z]?', normalized)
 
         if pre_unit_number_match and post_unit_number_match:
-            print(f"Warning: The address '{address}' has both a number before and after the unit identifier. Review: '{address}'")
+            print(f"Warning: The raw address '{address}' has both a number before and after the unit identifier. Review: '{normalized}'")
             return True
 
     return False
@@ -239,10 +242,11 @@ def replace_street_suffix(address, suffix_mapping):
 
     return address, None
 
-def parse_address(address):
+def parse_address(address, warningsEnabled=False):
     """
     Given an address, return the raw address, normalized address, unit number, address without the unit,
     street number, street without the number, street type, and a flag indicating if the address is complete.
+    Optionally, warnings can be enabled to print common edge cases encountered with warningsEnabled=True.
     """
     normalized = normalize_address(address)
     unit_number = extract_unit_number(normalized)
