@@ -1,5 +1,5 @@
 import re
-from .street_suffix_mapping import street_suffix_mapping
+from .street_suffix_mapping import street_suffix_mapping, formal_street_suffix_mapping
 
 def normalize_address(address, warningsEnabled=False):
     """
@@ -28,7 +28,8 @@ def normalize_address(address, warningsEnabled=False):
     normalized = re.sub(r'[^\w\s-]', '', normalized)
 
     # Check for common edge cases and print warnings
-    edge_case_found = _check_for_edge_cases(address, normalized, warningsEnabled)
+    if warningsEnabled:
+        edge_case_found = _check_for_edge_cases(address, normalized)
 
     # Define unit identifiers for checking
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
@@ -55,14 +56,14 @@ def normalize_address(address, warningsEnabled=False):
     normalized = re.sub(r'\s+', ' ', normalized)
 
     # Check for common edge cases and print warnings
-    if not edge_case_found:
-        _check_for_edge_cases(address, normalized, warningsEnabled)
+    if warningsEnabled and not edge_case_found:
+        _check_for_edge_cases(address, normalized)
 
     return normalized if normalized else None
 
 
 
-def _check_for_edge_cases(address, normalized, warningsEnabled=False):
+def _check_for_edge_cases(address, normalized):
     """
     Check for formatting issues related to unit identifiers, such as:
     - Duplicate unit identifiers in the address.
@@ -70,11 +71,9 @@ def _check_for_edge_cases(address, normalized, warningsEnabled=False):
     - Unit identifier with no valid number or letter following it.
     - Unit identifier having both a number before and after it, indicating incorrect ordering.
     """
-    if not warningsEnabled:
-        return False
 
     # Ensure the address is in uppercase for consistency
-    normalized = normalized.upper()
+    normalized = normalized.upper().replace('  ', ' ')
     
     # Define unit identifiers
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
@@ -248,6 +247,37 @@ def _replace_street_suffix(address, suffix_mapping):
 
     return address, None
 
+_formal_direction_mapping = {
+    "N": "NORTH",
+    "S": "SOUTH",
+    "E": "EAST",
+    "W": "WEST",
+    "NE": "NORTHEAST",
+    "NW": "NORTHWEST",
+    "SE": "SOUTHEAST",
+    "SW": "SOUTHWEST",
+}
+
+def formalize_address(address):
+    """
+    Formalize an address by first normalizing it, then converting 
+    street suffixes and direction abbreviations back to their full forms.
+
+    Ex: 123 R ST NE 130 -> 123 R STREET NORTHEAST 130
+    """
+    normalized_address = normalize_address(address)
+    
+    if not normalized_address:
+        return None
+
+    # Formalize street suffix
+    formalized_address, _ = _replace_street_suffix(normalized_address, formal_street_suffix_mapping)
+
+    # Formalize direction abbreviations
+    formalized_address = _standardize_directions(formalized_address, _formal_direction_mapping)
+
+    return formalized_address
+
 def parse_address(address, warningsEnabled=False):
     """
     Given an address, return the normalized address, unit number, address without the unit,
@@ -260,6 +290,7 @@ def parse_address(address, warningsEnabled=False):
     street_number = _extract_street_number(address_without_unit)
     street_name = _extract_street_name(address_without_unit)
     street_type = _replace_street_suffix(address_without_unit, street_suffix_mapping)
+    formal_address = formalize_address(address)
     
     return {
         "address": normalized,
