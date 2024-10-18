@@ -31,19 +31,17 @@ def normalize_address(address, warningsEnabled=False):
     if warningsEnabled:
         edge_case_found = _check_for_edge_cases(address, normalized)
 
-    # Define unit identifiers for checking
+    # Define unit identifiers for extraction
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
     
-    # Add a space between unit identifiers and the following numbers if missing (e.g., 'PH2-20' -> 'PH 2-20')
+    # Ensure unit identifiers with dashes are treated correctly
     normalized = re.sub(r'(' + unit_identifiers + r')(?=\d)', r'\1 ', normalized)
 
-    # Search for the first occurrence of a unit identifier with its unit number
-    match = re.search(unit_identifiers + r'\s*\d+[A-Z-]*', normalized)
+    # Extract and move the unit to the end of the address
+    match = re.search(unit_identifiers + r'\s*\d+(-\d+)?[A-Z-]*', normalized)
     if match:
         unit_str = match.group()
-        # Remove the unit string from the current position
-        normalized = re.sub(unit_identifiers + r'\s*\d+[A-Z-]*', '', normalized).strip()
-        # Add the unit string to the end of the address
+        normalized = re.sub(unit_identifiers + r'\s*\d+(-\d+)?[A-Z-]*', '', normalized).strip()
         normalized = f"{normalized} {unit_str}".strip()
 
     # Standardize direction abbreviations using the provided direction_mapping
@@ -63,28 +61,38 @@ def normalize_address(address, warningsEnabled=False):
 
 
 
-def _check_for_edge_cases(address, normalized):
+def _check_for_edge_cases(address, normalized, warningsEnabled=False):
     """
     Check for formatting issues related to unit identifiers, such as:
     - Duplicate unit identifiers in the address.
     - Unit identifier appearing before the street number and name in the normalized result.
-    - Unit identifier with no valid number or letter following it.
     - Unit identifier having both a number before and after it, indicating incorrect ordering.
     """
+    if not warningsEnabled:
+        return False
 
     # Ensure the address is in uppercase for consistency
-    normalized = normalized.upper().replace('  ', ' ')
-    
+    normalized = normalized.upper()
+
     # Define unit identifiers
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
 
-    # Check for duplicate unit identifiers
-    all_matches = re.findall(unit_identifiers, normalized)
-    if len(all_matches) > 1:
-        print(f"Warning: The raw address '{address}' contains duplicate unit identifiers. Review: '{normalized}'")
-        return True
+    # Pattern to detect consecutive units with similar numbers
+    duplicate_unit_pattern = r'(\b(?:APT|UNIT|STE|SUITE|#)\s*\d+[A-Z\-]?)\s*(APT|UNIT|STE|SUITE|#)\s*(\d+[A-Z\-]?)'
 
-    # Check if a unit identifier exists
+    # Find duplicate unit identifier pairs
+    match = re.search(duplicate_unit_pattern, normalized)
+    if match:
+        # Extract the units for comparison
+        unit1 = match.group(1).strip()
+        unit2 = match.group(2).strip() + " " + match.group(3).strip()
+
+        # Compare the unit numbers and decide which one to keep
+        if unit1.split()[-1] == unit2.split()[-1]:
+            # Remove the second unit if they are identical
+            normalized = normalized.replace(unit2, "").strip()
+            print(f"Warning: The raw address '{address}' has duplicate unit formats. Review cleaned: '{normalized}'")
+
     unit_match = re.search(unit_identifiers, normalized)
     if unit_match:
         unit_identifier_position = unit_match.end()
@@ -120,7 +128,7 @@ def _extract_unit(address):
 
     # Regex patterns to match common unit number formats with exact identifiers
     unit_patterns = [
-        r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b\s*[#A-Z\d\-]+\b',  # Added word boundaries for precision
+        r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b\s*[#A-Z\d\-]+\b',
     ]
 
     # Check for common unit identifiers first (APT, UNIT, etc.)
@@ -133,7 +141,6 @@ def _extract_unit(address):
     parts = normalized.split()
     if len(parts) > 1:
         last_part = parts[-1]
-        # Updated regex to handle simple cases (e.g., 'P-5') and complex cases (e.g., 'G1-205')
         if re.match(r'^[A-Z]?\d+(-\d+)?[A-Z]?$|^[A-Z]-\d+$|^\d+-[A-Z]$', last_part):
             return last_part
 
@@ -228,7 +235,6 @@ def _standardize_directions(address, _direction_mapping):
     # Iterate over the address components to replace any directions
     standardized_parts = [_direction_mapping.get(part, part) for part in address_parts]
 
-    # Reconstruct the address
     return ' '.join(standardized_parts)
 
 def _replace_street_suffix(address, suffix_mapping):
@@ -280,26 +286,18 @@ def formalize_address(address):
 
 def parse_address(address, warningsEnabled=False):
     """
-    Given an address, return the normalized address, unit number, address without the unit,
-    street number, street without the number, street type, and a flag indicating if the address is complete.
-    Optionally, warnings can be enabled to print common edge cases encountered with warningsEnabled=True.
+    Given an address, return its key components (normalized address, unit number, etc.).
     """
     normalized = normalize_address(address, warningsEnabled)
-    unit_number = _extract_unit(normalized)
-    address_without_unit = _remove_unit_number(normalized)
-    street_number = _extract_street_number(address_without_unit)
-    street_name = _extract_street_name(address_without_unit)
-    street_type = _replace_street_suffix(address_without_unit, street_suffix_mapping)
-    formal_address = formalize_address(address)
     
     return {
         "address": normalized,
-        "unitNumber": unit_number,
-        "addressNoUnit": address_without_unit,
-        "streetNumber": street_number,
-        "streetName": street_name,
-        "streetType": street_type[1],
-        "isComplete": all([normalized, street_number, street_name])
+        "unitNumber": unit_number(normalized),
+        "addressNoUnit": remove_unit(normalized),
+        "streetNumber": street_number(normalized),
+        "streetName": street_name(normalized),
+        "streetType": street_type(normalized),
+        "isComplete": is_complete(normalized)
     }
 
 def unit_number(address):
@@ -343,11 +341,17 @@ def remove_unit(address):
     """
     return _remove_unit_number(normalize_address(address))
 
-def is_complete(address):
+def is_complete(address, warningsEnabled=False):
     """
     Check if the address is complete by ensuring it has a street number, street name, and normalized address.
-    
+
     Ex: 1234 Main Street, Unit 5 -> True
     """
-    parsed_address = parse_address(address)
-    return parsed_address["isComplete"]
+    normalized = normalize_address(address, warningsEnabled)
+    
+    # Ensure the address has a valid street number, street name, and normalized address
+    street_number_exists = street_number(normalized) is not None
+    street_name_exists = street_name(normalized) is not None
+    
+    # An address is considered complete if it has a street number, street name, and normalized address
+    return all([normalized, street_number_exists, street_name_exists])

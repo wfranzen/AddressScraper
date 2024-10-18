@@ -32,4 +32,7 @@ test_addresses = [
     "200-B Oak Lane",                   # Hyphenated street number
     "400 Washington Blvd NW",           # Typical address with a direction suffix
     "500 Lake Shore Dr PH-2",           # Penthouse unit designation
+    "10315 CORTEZ RD W LOT 61-3",
+    "400 NW 35TH ST APT 1-4",
+    "5000 CULBREATH KEY WAY APT 9-316",
 ]

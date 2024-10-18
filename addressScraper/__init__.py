@@ -6,5 +6,6 @@ from .addressScraper import (
     street_name,
     street_type,
     remove_unit,
-    is_complete
+    is_complete,
+    formalize_address
 )
