@@ -27,21 +27,23 @@ def normalize_address(address, warningsEnabled=False):
     # Remove all leading/trailing # symbols and unnecessary special characters
     normalized = re.sub(r'[^\w\s-]', '', normalized)
 
-    # Check for common edge cases and print warnings
+    # Check for common edge cases and print warnings if enabled
     if warningsEnabled:
-        edge_case_found = _check_for_edge_cases(address, normalized)
+        warningsEnabled = _check_for_edge_cases(address, normalized)
 
-    # Define unit identifiers for extraction
+    # Define unit identifiers for checking
     unit_identifiers = r'\b(UNIT|STE|SUITE|APT|FL|FLOOR|BLDG|BUILDING|HNGR|HANGER|LOT|PMB|SPC|PH)\b'
     
-    # Ensure unit identifiers with dashes are treated correctly
+    # Add a space between unit identifiers and the following numbers if missing (e.g., 'PH2-20' -> 'PH 2-20')
     normalized = re.sub(r'(' + unit_identifiers + r')(?=\d)', r'\1 ', normalized)
 
-    # Extract and move the unit to the end of the address
-    match = re.search(unit_identifiers + r'\s*\d+(-\d+)?[A-Z-]*', normalized)
+    # Search for the first occurrence of a unit identifier with its unit number
+    match = re.search(unit_identifiers + r'\s*\d+[A-Z-]*', normalized)
     if match:
         unit_str = match.group()
-        normalized = re.sub(unit_identifiers + r'\s*\d+(-\d+)?[A-Z-]*', '', normalized).strip()
+        # Remove the unit string from the current position
+        normalized = re.sub(unit_identifiers + r'\s*\d+[A-Z-]*', '', normalized).strip()
+        # Add the unit string to the end of the address
         normalized = f"{normalized} {unit_str}".strip()
 
     # Standardize direction abbreviations using the provided direction_mapping
@@ -53,23 +55,20 @@ def normalize_address(address, warningsEnabled=False):
     # Remove multiple spaces and reduce them to a single space
     normalized = re.sub(r'\s+', ' ', normalized)
 
-    # Check for common edge cases and print warnings
-    if warningsEnabled and not edge_case_found:
+    # Check again for common edge cases after normalization and print warnings if enabled
+    if not warningsEnabled:
         _check_for_edge_cases(address, normalized)
 
     return normalized if normalized else None
 
 
-
-def _check_for_edge_cases(address, normalized, warningsEnabled=False):
+def _check_for_edge_cases(address, normalized):
     """
     Check for formatting issues related to unit identifiers, such as:
     - Duplicate unit identifiers in the address.
     - Unit identifier appearing before the street number and name in the normalized result.
     - Unit identifier having both a number before and after it, indicating incorrect ordering.
     """
-    if not warningsEnabled:
-        return False
 
     # Ensure the address is in uppercase for consistency
     normalized = normalized.upper()
