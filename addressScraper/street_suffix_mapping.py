@@ -328,6 +328,7 @@ street_suffix_mapping = {
     "PINE": "PNE",
     "PINES": "PNES",
     "PNES": "PNES",
+    "PLACE": "PL",
     "PL": "PL",
     "PLAIN": "PLN",
     "PLN": "PLN",
