@@ -1,7 +1,7 @@
 import re
-from street_suffix_mapping import street_suffix_mapping, formal_street_suffix_mapping
+from .street_suffix_mapping import street_suffix_mapping, formal_street_suffix_mapping
 
-def normalize_address(address, warningsEnabled=False):
+def parse_address(address, warningsEnabled=False):
     if not isinstance(address, str) or not address.strip():
         return None
 
@@ -45,8 +45,7 @@ def normalize_address(address, warningsEnabled=False):
     i = street_type_pos - 1
     while i >= 0:
         word = words[i]
-        # Updated regex pattern to match alphanumeric street numbers with hyphens
-        if re.match(r'^\d+(-[A-Z\d]+)*$', word):
+        if re.match(r'^\d+[A-Z]?(-\d+[A-Z]?)?$', word):
             street_number = word
             street_number_pos = i
             break
@@ -55,7 +54,6 @@ def normalize_address(address, warningsEnabled=False):
     if street_number_pos is None:
         # No street number found; assume start at position 0
         street_number_pos = 0
-
 
     # Step 3: Check for the presence of a directional prefix directly after the street number
     if street_number_pos + 1 < len(words) and words[street_number_pos + 1] in directionals:
@@ -348,34 +346,35 @@ def formalize_address(address):
 
     return formalized_address
 
-def parse_address(address, warningsEnabled=False):
-    """
-    Given an address, return its key components (normalized address, unit number, etc.).
-    """
-    normalized = normalize_address(address, warningsEnabled)
-    if not normalized:
-        print(f"AddressScraper Warning: Invalid address format. Expected a non-empty string. Review: '{address}'")
-        return None
+# def parse_address(address, warningsEnabled=False):
+#     """
+#     Given an address, return its key components (normalized address, unit number, etc.).
+#     """
+#     normalized = normalize_address(address, warningsEnabled)
+#     if not normalized:
+#         print(f"AddressScraper Warning: Invalid address format. Expected a non-empty string. Review: '{address}'")
+#         return None
 
-    return {
-        "address": normalized['address'],
-        "unitNumber": normalized.get('unitNumber'),
-        "addressNoUnit": normalized.get('addressNoUnit'),
-        "streetNumber": normalized.get('streetNumber'),
-        "streetName": normalized.get('streetName'),
-        "streetType": normalized.get('streetType'),
-        "streetDirectionPrefix": normalized.get('streetDirectionPrefix'),
-        "streetDirectionSuffix": normalized.get('streetDirectionSuffix'),
-        "isComplete": normalized.get('isComplete')
-    }
+#     return {
+#         "address": normalized['address'],
+#         "unitNumber": normalized.get('unitNumber'),
+#         "addressNoUnit": normalized.get('addressNoUnit'),
+#         "streetNumber": normalized.get('streetNumber'),
+#         "streetName": normalized.get('streetName'),
+#         "streetType": normalized.get('streetType'),
+#         "streetDirectionPrefix": normalized.get('streetDirectionPrefix'),
+#         "streetDirectionSuffix": normalized.get('streetDirectionSuffix'),
+#         "isComplete": normalized.get('isComplete')
+#     }
 
-def get_address(address):
+def normalize_address(address):
     """
-    Get the address with the unit number.
+    Normalize an address according to USPS standards.
 
-    Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
+    Ex: 1234 Main Street, Unit 5 -> 1234 MAIN ST UNIT 5
     """
-    return normalize_address(address).get('address')
+
+    return parse_address(address).get('address')
 
 def get_unit_number(address):
     """
@@ -383,7 +382,7 @@ def get_unit_number(address):
 
     Ex: 1234 Main Street, Unit 5 -> Unit 5
     """
-    return _extract_unit(normalize_address(address))
+    return _extract_unit(parse_address(address))
 
 def get_street_number(address):
     """
@@ -391,7 +390,7 @@ def get_street_number(address):
 
     Ex: 1234 Main Street, Unit 5 -> 1234
     """
-    return normalize_address(address).get('streetNumber')
+    return parse_address(address).get('streetNumber')
 
 def get_street_name(address):
     """
@@ -399,7 +398,7 @@ def get_street_name(address):
 
     Ex: 1234 Main St, Unit 5 -> Main St
     """
-    return normalize_address(address).get('streetName')
+    return parse_address(address).get('streetName')
 
 def get_street_type(address):
     """
@@ -407,7 +406,7 @@ def get_street_type(address):
 
     Ex: 1234 Main St, Unit 5 -> St
     """
-    return normalize_address(address).get('streetType')
+    return parse_address(address).get('streetType')
 
 def get_address_nounit(address):
     """
@@ -415,7 +414,7 @@ def get_address_nounit(address):
 
     Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
     """
-    return normalize_address(address).get('addressNoUnit')
+    return parse_address(address).get('addressNoUnit')
 
 def get_street_prefix(address):
     """
@@ -423,7 +422,7 @@ def get_street_prefix(address):
 
     Ex: 1234 North Main St, Unit 5 -> N
     """
-    return normalize_address(address).get('streetDirectionPrefix')
+    return parse_address(address).get('streetDirectionPrefix')
 
 def get_street_suffix(address):
     """
@@ -431,7 +430,7 @@ def get_street_suffix(address):
 
     Ex: 1234 Main St Northwest, Unit 5 -> NW
     """
-    return normalize_address(address).get('streetDirectionSuffix')
+    return parse_address(address).get('streetDirectionSuffix')
 
 def is_complete(address, warningsEnabled=False):
     """
@@ -439,7 +438,7 @@ def is_complete(address, warningsEnabled=False):
 
     Ex: 1234 Main Street, Unit 5 -> True
     """
-    normalized = normalize_address(address, warningsEnabled)
+    normalized = parse_address(address, warningsEnabled)
     
     # Ensure the address has a valid street number, street name, and normalized address
     street_number_exists = get_street_number(normalized) is not None
@@ -447,62 +446,3 @@ def is_complete(address, warningsEnabled=False):
     
     # An address is considered complete if it has a street number, street name, and normalized address
     return all([normalized, street_number_exists, street_name_exists])
-
-# Test Addresses (both expected and unexpected formats)
-test_addresses = [
-    "123 Main Street",                  # Simple, expected format
-    "456 SOUTH ELM St nw,, Apt 2B",       # Mixed case direction and unit number
-    "789 East Pine St. Rd",             # Two possible street types ('St.' and 'Rd')
-    "321 Beach Blvd, Suite 100",        # Street type and unit type with a comma
-    "2030 F ST NW",                     # Common short address format
-    "350 Liberty AVENUE NORTHEAST",     # Full directional spelled out
-    "1201 Northwest Southport Rd SE",   # Contradictory direction prefix and suffix
-    "601 N Broadway FL 15",             # Street with 'FL' (Floor) as unit type
-    "402 E Maple STREET Unit #200",     # Street with mixed unit notation
-    "100-200 B ST NW",                  # Address range format
-    "Apt 3 250 W Main St",              # Unit indicator before street address
-    "5th Avenue Apt 2C",                # Commonly used street name without a number
-    "Highway 101",                      # Highway address without typical street suffix
-    "1010 Downing St Building B",       # Building identifier
-    "121B Baker Street",                # Alphanumeric street number
-    "1 First St & Main St",             # Intersection format
-    "PO Box 123",                       # PO Box format
-    "55 W Wacker Drive Ste 201",        # Mixed use of 'Ste' with numeric suite
-    "No address provided",              # Unexpected format (invalid address)
-    "",                                 # Empty string
-    " ",                                # Blank spaces
-    None,                               # None as input
-    "123 West-East Rd Apt 4",           # Unusual street name with hyphenated direction
-    "456 OLD HIGHWAY 441",              # Older highway address format
-    "Suite 201 789 Elm St",             # Unit identifier before street address
-    "500 Elm Street Elm",               # Duplicate street type as a name
-    "100 Baker St Ste A",               # Alphanumeric unit number
-    "789 Beach Drive Blvd",             # Two street suffixes ('Drive' and 'Blvd')
-    "200-B Oak Lane",                   # Hyphenated street number
-    "400 Washington Blvd NW",           # Typical address with a direction suffix
-    "500 Lake Shore Dr PH-2",           # Penthouse unit designation
-    "10315 CORTEZ RD W LOT 61-3",       # Hyphenated unit number
-    "400 NW 35TH ST APT 1-4",           # Hyphenated unit number
-    "5000 CULBREATH KEY WAY APT 9-316", # Hyphenated long unit number
-    "1008 EAST SOUTH STREET",           # Two directions, one as a part of the street name
-    "5017 WEST NORTHWEST BLVD",         # Two directions, one as a part of the street name
-    "2220 CEDAR PLACE CT",              # Common street type abbreviation in street name
-    "10969 GEIST WOODS SOUTH DR",       # Directions in the street name
-    "100 OUTER SPACE RD SPACE 15",      # Address with 'SPACE' as a unit type and street name
-    "APT 15, 100, SOUTH CEDAR PLACE PLACE",     # Street type also present in the street name
-    "5 1/2 BROWARD STREET FL 10"
-]
-
-if __name__ == "__main__":
-
-    # Iterate over test cases and print parsed results
-    for address in test_addresses:
-        result = parse_address(address, warningsEnabled=True)
-        print(f"Raw Address: {address}")
-        if result:
-            for key, value in result.items():
-                if value:
-                    print(f"{key}: {value}")
-                else:
-                    print(f"{key}: None")
-        print("-" * 50) 

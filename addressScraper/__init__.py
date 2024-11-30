@@ -1,11 +1,13 @@
 from .addressScraper import (
     normalize_address,
     parse_address,
-    unit_number,
-    street_number,
-    street_name,
-    street_type,
-    remove_unit,
+    get_unit_number,
+    get_street_number,
+    get_street_name,
+    get_street_type,
+    get_address_nounit,
+    get_street_prefix,
+    get_street_suffix,
     is_complete,
     formalize_address
 )
