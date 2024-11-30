@@ -45,7 +45,8 @@ def normalize_address(address, warningsEnabled=False):
     i = street_type_pos - 1
     while i >= 0:
         word = words[i]
-        if re.match(r'^\d+[A-Z]?(-\d+[A-Z]?)?$', word):
+        # Updated regex pattern to match alphanumeric street numbers with hyphens
+        if re.match(r'^\d+(-[A-Z\d]+)*$', word):
             street_number = word
             street_number_pos = i
             break
@@ -54,6 +55,7 @@ def normalize_address(address, warningsEnabled=False):
     if street_number_pos is None:
         # No street number found; assume start at position 0
         street_number_pos = 0
+
 
     # Step 3: Check for the presence of a directional prefix directly after the street number
     if street_number_pos + 1 < len(words) and words[street_number_pos + 1] in directionals:
@@ -488,6 +490,7 @@ test_addresses = [
     "10969 GEIST WOODS SOUTH DR",       # Directions in the street name
     "100 OUTER SPACE RD SPACE 15",      # Address with 'SPACE' as a unit type and street name
     "APT 15, 100, SOUTH CEDAR PLACE PLACE",     # Street type also present in the street name
+    "5 1/2 BROWARD STREET FL 10"
 ]
 
 if __name__ == "__main__":
