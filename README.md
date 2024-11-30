@@ -5,7 +5,7 @@ The Address Parser is a Python library designed to normalize addresses and extra
 ## Features
 
 - **Normalize Addresses**: Standardize addresses by converting to uppercase, removing unnecessary spaces, and handling common edge cases.
-- **Extract Components**: Extract the unit number, street number, and street name from an address.
+- **Extract Components**: Extract the unit number, street number, street name, and directional affixes from an address.
 - **Edge Case Detection**: Identify and warn about formatting issues in addresses.
 
 ## Installation
@@ -14,3 +14,4 @@ You can install this library directly from GitHub:
 
 ```bash
 pip install git+https://github.com/wfranzen/AddressScraper.git
+```

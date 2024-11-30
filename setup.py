@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="addressScraper",
-    version="0.4.0",
-    author="Will Franzen",
+    version="2.0.0",
+    author="wfranzen",
     author_email="willfranzen@gmail.com",
-    description="A Python library for normalizing and extracting address components",
+    description="A Python library for standardizing addresses and extracting address components",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/wfranzen/AddressScraper",
