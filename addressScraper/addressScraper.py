@@ -9,7 +9,7 @@ def parse_address(address, warningsEnabled=False):
     address = address.upper().strip()
     address = re.sub(r'\s*&\s*', ' AND ', address)
     address = re.sub(r'[^\w\s/-]', '', address)
-    original_address = address  # Keep a copy
+    original_address = address
     words = address.split()
 
     street_number = None
@@ -39,28 +39,43 @@ def parse_address(address, warningsEnabled=False):
 
     if street_type_pos is None:
         # No street type found; assume the last word is the street type
+        if warningsEnabled: print(f"AddressScraper Warning: No standard street type found in '{address}'")
         street_type_pos = len(words) - 1
 
     # Step 2: Locate the street number from the right, starting at the street type's position
     i = street_type_pos - 1
     while i >= 0:
         word = words[i]
-        if re.match(r'^\d+[A-Z]?(-\d+[A-Z]?)?$', word):
+        if re.match(r'^\d+(-[A-Z\d]+)?$', word):
             street_number = word
             street_number_pos = i
+            # Handle fractional street numbers, adding the next word if it's a fraction
+            if i + 1 < len(words) and re.match(r'^\d+/\d+$', words[i + 1]):
+                street_number += ' ' + words[i + 1]
+                i += 1
+                # Pop the fraction from the list of words, and update the rest of the words positions
+                words.pop(i)
+                street_type_pos -= 1
+                if street_direction_suffix:
+                    street_type_pos -= 1
+                
             break
         i -= 1
 
     if street_number_pos is None:
-        # No street number found; assume start at position 0
-        street_number_pos = 0
+        # No street number found, set its position to the beginning of the address
+        if warningsEnabled: print(f"AddressScraper Warning: No standard street type found in '{address}'")
+        street_number_pos = -1
 
     # Step 3: Check for the presence of a directional prefix directly after the street number
     if street_number_pos + 1 < len(words) and words[street_number_pos + 1] in directionals:
-        street_direction_prefix = words[street_number_pos + 1]
-        if street_direction_prefix in _formal_direction_mapping.values():
-            # Convert the formal direction to the USPS standard abbreviation
-            street_direction_prefix = _standardize_directions(street_direction_prefix, _direction_mapping)
+        if street_number_pos + 2 < len(words) and words[street_number_pos + 2] in street_types:
+            street_direction_prefix = None
+        else:
+            street_direction_prefix = words[street_number_pos + 1]
+            if street_direction_prefix in _formal_direction_mapping.values():
+                # Convert the formal direction to the USPS standard abbreviation
+                street_direction_prefix = _standardize_directions(street_direction_prefix, _direction_mapping)
 
     # Extract street name between street number and street type, excluding directional suffix
     name_start = street_number_pos
@@ -69,16 +84,14 @@ def parse_address(address, warningsEnabled=False):
     name_end = street_type_pos
     street_name_words = words[name_start + 1:name_end]
     street_name = ' '.join(street_name_words)
-    if street_direction_prefix:
-        street_name = f"{street_direction_prefix} {street_name}"
 
-    # Handle multi-word street types (e.g., "HIGHWAY 441")
+    # Handle multi-word street types (e.g., "240 HWY 441")
     multi_word_street_types = {'HWY', 'STATE RD', 'COUNTY RD', 'RTE', 'US HWY', 'US RTE'}
     if street_type in multi_word_street_types:
         # Include the next word if it's a number
         if street_type_pos + 1 < len(words) and re.match(r'^\d+$', words[street_type_pos + 1]):
             street_type += ' ' + words[street_type_pos + 1]
-            street_type_pos += 1  # Adjust the position to include the number
+            street_type_pos += 1
             address_no_unit_words = words[street_number_pos:street_type_pos + 1]
             address_no_unit = ' '.join(address_no_unit_words)
 
@@ -105,17 +118,30 @@ def parse_address(address, warningsEnabled=False):
             unit_info = unit_info.strip()
 
     # Step 6: Reconstruct the address
-    reconstructed_address_parts = []
-    if street_number:
-        reconstructed_address_parts.append(street_number)
-    if street_name:
-        reconstructed_address_parts.append(street_name)
-    if street_type:
-        reconstructed_address_parts.append(street_type)
-    if street_direction_suffix:
-        reconstructed_address_parts.append(street_direction_suffix)
-    if unit_info:
-        reconstructed_address_parts.append(unit_info)
+    # reconstructed_address_parts = []
+    # if street_number:
+    #     reconstructed_address_parts.append(street_number)
+    # if street_direction_prefix:
+    #     reconstructed_address_parts.append(street_direction_prefix)
+    # if street_name:
+    #     reconstructed_address_parts.append(street_name)
+    # if street_type:
+    #     reconstructed_address_parts.append(street_type)
+    # if street_direction_suffix:
+    #     reconstructed_address_parts.append(street_direction_suffix)
+    # if unit_info:
+    #     reconstructed_address_parts.append(unit_info)
+    # reconstructed_address = ' '.join(reconstructed_address_parts)
+    reconstructed_address_parts = [
+        part for part in [
+            street_number,
+            street_direction_prefix,
+            street_name,
+            street_type,
+            street_direction_suffix,
+            unit_info
+        ] if part not in [None, '']
+    ]
     reconstructed_address = ' '.join(reconstructed_address_parts)
 
     # Check for formatting issues related to unit identifiers
@@ -128,6 +154,14 @@ def parse_address(address, warningsEnabled=False):
     else:
         address_no_unit = reconstructed_address
 
+    # Step 8: Create 'street' variable
+    if street_name and street_type:
+        street = f"{street_name} {street_type}".strip()
+        if street_direction_prefix:
+            street = f"{street_direction_prefix} {street}".strip()
+    else:
+        street = None
+
     # Prepare the parsed address dictionary
     parsed_address = {
         'streetNumber': street_number,
@@ -136,9 +170,10 @@ def parse_address(address, warningsEnabled=False):
         'streetType': street_type if street_type else None,
         'streetDirectionSuffix': street_direction_suffix if street_direction_suffix else None,
         'unitNumber': unit_info.strip() if unit_info else None,
-        'address': reconstructed_address.strip() if reconstructed_address else None,
-        'addressNoUnit': address_no_unit if address_no_unit else None,
-        'isComplete': all([street_number is not None, street_name is not None, reconstructed_address or address_no_unit])
+        'street': street.strip() if street else None,
+        'address': address_no_unit if address_no_unit else None,
+        'addressUnit': reconstructed_address.strip() if reconstructed_address else None,
+        'isComplete': all([street_number is not None, street_name is not None, reconstructed_address is not None or address_no_unit, street is not None])
     }
 
     return parsed_address
@@ -333,39 +368,39 @@ def formalize_address(address):
 
     Ex: 123 R ST NE 130 -> 123 R STREET NORTHEAST 130
     """
-    normalized_address = normalize_address(address)
-    
-    if not normalized_address:
+    address_info = parse_address(address)
+    if not address_info:
         return None
 
-    # Formalize street suffix
-    formalized_address, _ = _replace_street_suffix(normalized_address, formal_street_suffix_mapping)
+    street_num = address_info.get('streetNumber')
+    street_direction_prefix = address_info.get('streetDirectionPrefix')
+    street_name = address_info.get('streetName')
+    street_type = address_info.get('streetType')
+    street_direction_suffix = address_info.get('streetDirectionSuffix')
+    unit_info = address_info.get('unitNumber')
 
-    # Formalize direction abbreviations
-    formalized_address = _standardize_directions(formalized_address, _formal_direction_mapping)
+    # Convert directional affixes and street type to full form
+    if street_direction_prefix:
+        street_direction_prefix = _standardize_directions(street_direction_prefix, _formal_direction_mapping)
+    if street_direction_suffix:
+        street_direction_suffix = _standardize_directions(street_direction_suffix, _formal_direction_mapping)
+    if street_type:
+        street_type = formal_street_suffix_mapping.get(street_type, street_type)
+
+    # Reconstruct the formalized address
+    formalized_address_parts = [
+        part for part in [
+            street_num,
+            street_direction_prefix,
+            street_name,
+            street_type,
+            street_direction_suffix,
+            unit_info
+        ] if part
+    ]
+    formalized_address = ' '.join(formalized_address_parts)
 
     return formalized_address
-
-# def parse_address(address, warningsEnabled=False):
-#     """
-#     Given an address, return its key components (normalized address, unit number, etc.).
-#     """
-#     normalized = normalize_address(address, warningsEnabled)
-#     if not normalized:
-#         print(f"AddressScraper Warning: Invalid address format. Expected a non-empty string. Review: '{address}'")
-#         return None
-
-#     return {
-#         "address": normalized['address'],
-#         "unitNumber": normalized.get('unitNumber'),
-#         "addressNoUnit": normalized.get('addressNoUnit'),
-#         "streetNumber": normalized.get('streetNumber'),
-#         "streetName": normalized.get('streetName'),
-#         "streetType": normalized.get('streetType'),
-#         "streetDirectionPrefix": normalized.get('streetDirectionPrefix'),
-#         "streetDirectionSuffix": normalized.get('streetDirectionSuffix'),
-#         "isComplete": normalized.get('isComplete')
-#     }
 
 def normalize_address(address):
     """
@@ -376,7 +411,7 @@ def normalize_address(address):
 
     return parse_address(address).get('address')
 
-def get_unit_number(address):
+def get_unit_info(address):
     """
     Extract the unit number from an address if it exists.
 
@@ -408,13 +443,13 @@ def get_street_type(address):
     """
     return parse_address(address).get('streetType')
 
-def get_address_nounit(address):
+def get_address_with_unit(address):
     """
     Remove the unit number from an address if it exists.
 
     Ex: 1234 Main Street, Unit 5 -> 1234 Main Street
     """
-    return parse_address(address).get('addressNoUnit')
+    return parse_address(address).get('addressUnit')
 
 def get_street_prefix(address):
     """

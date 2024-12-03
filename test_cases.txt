@@ -2,7 +2,7 @@
 # Test Addresses (both expected and unexpected formats)
 test_addresses = [
     "123 Main Street",                  # Simple, expected format
-    "456 SOUTH ELM St nw,, Apt 2B",       # Mixed case direction and unit number
+    "456 SOUTH ELM St nw,, Apt 2B",     # Mixed case direction and unit number
     "789 East Pine St. Rd",             # Two possible street types ('St.' and 'Rd')
     "321 Beach Blvd, Suite 100",        # Street type and unit type with a comma
     "2030 F ST NW",                     # Common short address format
@@ -31,7 +31,7 @@ test_addresses = [
     "789 Beach Drive Blvd",             # Two street suffixes ('Drive' and 'Blvd')
     "200-B Oak Lane",                   # Hyphenated street number
     "400 Washington Blvd NW",           # Typical address with a direction suffix
-    "500 Lake Shore Dr PH-2",           # Penthouse unit designation
+    "500 Lake Shore Dr PH2",            # Penthouse unit designation
     "10315 CORTEZ RD W LOT 61-3",       # Hyphenated unit number
     "400 NW 35TH ST APT 1-4",           # Hyphenated unit number
     "5000 CULBREATH KEY WAY APT 9-316", # Hyphenated long unit number
@@ -41,5 +41,8 @@ test_addresses = [
     "10969 GEIST WOODS SOUTH DR",       # Directions in the street name
     "100 OUTER SPACE RD SPACE 15",      # Address with 'SPACE' as a unit type and street name
     "APT 15, 100, SOUTH CEDAR PLACE PLACE",     # Street type also present in the street name
-    "5 1/2 BROWARD STREET FL 10"
+    "5 1/2 BROWARD STREET FL 10",
+    "1000 S ST NW",
+    "1000 NORTHWEST ST NW",
+    "10th ST APT 15",
 ]
