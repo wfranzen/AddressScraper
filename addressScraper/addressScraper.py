@@ -118,20 +118,6 @@ def parse_address(address, warningsEnabled=False):
             unit_info = unit_info.strip()
 
     # Step 6: Reconstruct the address
-    # reconstructed_address_parts = []
-    # if street_number:
-    #     reconstructed_address_parts.append(street_number)
-    # if street_direction_prefix:
-    #     reconstructed_address_parts.append(street_direction_prefix)
-    # if street_name:
-    #     reconstructed_address_parts.append(street_name)
-    # if street_type:
-    #     reconstructed_address_parts.append(street_type)
-    # if street_direction_suffix:
-    #     reconstructed_address_parts.append(street_direction_suffix)
-    # if unit_info:
-    #     reconstructed_address_parts.append(unit_info)
-    # reconstructed_address = ' '.join(reconstructed_address_parts)
     reconstructed_address_parts = [
         part for part in [
             street_number,
@@ -172,7 +158,7 @@ def parse_address(address, warningsEnabled=False):
         'unitNumber': unit_info.strip() if unit_info else None,
         'street': street.strip() if street else None,
         'address': address_no_unit if address_no_unit else None,
-        'addressUnit': reconstructed_address.strip() if reconstructed_address else None,
+        'addressUnit': reconstructed_address.strip() if reconstructed_address and unit_info else None,
         'isComplete': all([street_number is not None, street_name is not None, reconstructed_address is not None or address_no_unit, street is not None])
     }
 
