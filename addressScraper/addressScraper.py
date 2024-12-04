@@ -39,14 +39,16 @@ def parse_address(address, warningsEnabled=False):
 
     if street_type_pos is None:
         # No street type found; assume the last word is the street type
-        if warningsEnabled: print(f"AddressScraper Warning: No standard street type found in '{address}'")
+        if warningsEnabled: print(f"AddressScraper Warning: No standard street type found in '{address}', please review this address.")
         street_type_pos = len(words) - 1
 
     # Step 2: Locate the street number from the right, starting at the street type's position
     i = street_type_pos - 1
     while i >= 0:
         word = words[i]
-        if re.match(r'^\d+(-[A-Z\d]+)?$', word):
+        # Match the street number pattern (e.g., '123', '123-4', '123-4A', '123A', but not '5TH', '1ST', '3RD', etc.)
+        # if re.match(r'^\d+(-[A-Z\d]+)?$', word):
+        if re.match(r'^\d+(-[A-Z\d]+)?$', word) or re.match(r'^\d+[A-Z]?$', word):
             street_number = word
             street_number_pos = i
             # Handle fractional street numbers, adding the next word if it's a fraction
@@ -64,7 +66,7 @@ def parse_address(address, warningsEnabled=False):
 
     if street_number_pos is None:
         # No street number found, set its position to the beginning of the address
-        if warningsEnabled: print(f"AddressScraper Warning: No standard street type found in '{address}'")
+        if warningsEnabled: print(f"AddressScraper Warning: No street number found in '{address}', please review this address.")
         street_number_pos = -1
 
     # Step 3: Check for the presence of a directional prefix directly after the street number

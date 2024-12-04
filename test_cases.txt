@@ -45,4 +45,6 @@ test_addresses = [
     "1000 S ST NW",
     "1000 NORTHWEST ST NW",
     "10th ST APT 15",
+    "100B MAPLE AVE",
+    "100 1000 LONG STREET"
 ]
