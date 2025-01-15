@@ -444,6 +444,7 @@ street_suffix_mapping = {
     "TRK": "TRAK",
     "TRKS": "TRAK",
     "TRAFFICWAY": "TRFY",
+    "TR": "TRL",
     "TRAIL": "TRL",
     "TRAILS": "TRL",
     "TRL": "TRL",
