@@ -2,6 +2,7 @@ from .addressScraper import (
     normalize_address,
     parse_address,
     get_unit_info,
+    get_unit_info_stripped,
     get_street_number,
     get_street_name,
     get_street_type,

@@ -119,7 +119,13 @@ def parse_address(address, warningsEnabled=False):
         else:
             unit_info = unit_info.strip()
 
-    # Step 6: Reconstruct the address
+    # Step 6: Create unitNumberStripped field, removing unit identifier from unit_info
+    if unit_info:
+        unit_number_stripped = re.sub(unit_identifiers, '', unit_info).strip()
+    else:
+        unit_number_stripped = None
+
+    # Step 7: Reconstruct the address
     reconstructed_address_parts = [
         part for part in [
             street_number,
@@ -136,13 +142,13 @@ def parse_address(address, warningsEnabled=False):
     if warningsEnabled:
         _check_for_edge_cases(address, reconstructed_address)
 
-    # Step 7: Reconstruction of the address without the unit number
+    # Step 8: Reconstruction of the address without the unit number
     if unit_info:
         address_no_unit = reconstructed_address.replace((unit_info), '', 1).strip()
     else:
         address_no_unit = reconstructed_address
 
-    # Step 8: Create 'street' variable
+    # Step 9: Create 'street' variable
     if street_name and street_type:
         street = f"{street_name} {street_type}".strip()
         if street_direction_prefix:
@@ -158,6 +164,7 @@ def parse_address(address, warningsEnabled=False):
         'streetType': street_type if street_type else None,
         'streetDirectionSuffix': street_direction_suffix if street_direction_suffix else None,
         'unitNumber': unit_info.strip() if unit_info else None,
+        'unitNumberStripped': unit_number_stripped if unit_info else None,
         'street': street.strip() if street else None,
         'address': address_no_unit if address_no_unit else None,
         'addressUnit': reconstructed_address.strip() if reconstructed_address and unit_info else None,
@@ -220,61 +227,62 @@ def _check_for_edge_cases(address, normalized):
 
     return False
 
-def _extract_unit(address):
-    """
-    Extract the unit number from an address if it exists.
+# NOT IN USE - FOR FUTURE IMPLEMENTATION
+# def _extract_unit(address):
+#     """
+#     Extract the unit number from an address if it exists.
 
-    Parameters:
-        address (str): The address from which to extract the unit number.
+#     Parameters:
+#         address (str): The address from which to extract the unit number.
 
-    Returns:
-        str or None: The extracted unit number, or None if not found.
-    """
-    if not isinstance(address, str):
-        return None
+#     Returns:
+#         str or None: The extracted unit number, or None if not found.
+#     """
+#     if not isinstance(address, str):
+#         return None
 
-    # Uppercase the address and strip any leading/trailing whitespace
-    normalized = address.upper().strip()
+#     # Uppercase the address and strip any leading/trailing whitespace
+#     normalized = address.upper().strip()
 
-    # Remove the '#' symbol as per USPS standards
-    normalized = normalized.replace('#', '')
+#     # Remove the '#' symbol as per USPS standards
+#     normalized = normalized.replace('#', '')
 
-    # Updated list of USPS-compliant unit identifiers, excluding 'KEY' and 'SIDE'
-    unit_identifiers_list = [
-        'APARTMENT', 'APT', 'BASEMENT', 'BSMT', 'BUILDING', 'BLDG', 'DEPARTMENT', 'DEPT',
-        'FLOOR', 'FL', 'HANGER', 'HNGR', 'LOBBY', 'LBBY', 'LOT', 'OFFICE', 'OFC', 'PENTHOUSE',
-        'PH', 'PIER', 'ROOM', 'RM', 'SLIP', 'SPACE', 'SPC', 'STOP', 'SUITE', 'STE', 'TRAILER',
-        'TRLR', 'UNIT'
-    ]
-    unit_identifiers = r'\b(?:' + '|'.join(unit_identifiers_list) + r')\b'
+#     # Updated list of USPS-compliant unit identifiers, excluding 'KEY' and 'SIDE'
+#     unit_identifiers_list = [
+#         'APARTMENT', 'APT', 'BASEMENT', 'BSMT', 'BUILDING', 'BLDG', 'DEPARTMENT', 'DEPT',
+#         'FLOOR', 'FL', 'HANGER', 'HNGR', 'LOBBY', 'LBBY', 'LOT', 'OFFICE', 'OFC', 'PENTHOUSE',
+#         'PH', 'PIER', 'ROOM', 'RM', 'SLIP', 'SPACE', 'SPC', 'STOP', 'SUITE', 'STE', 'TRAILER',
+#         'TRLR', 'UNIT'
+#     ]
+#     unit_identifiers = r'\b(?:' + '|'.join(unit_identifiers_list) + r')\b'
 
-    # Regex pattern to match unit identifiers followed by unit numbers, including hyphens
-    unit_pattern = r'(' + unit_identifiers + r')\s*([A-Z\d\-]+)'
+#     # Regex pattern to match unit identifiers followed by unit numbers, including hyphens
+#     unit_pattern = r'(' + unit_identifiers + r')\s*([A-Z\d\-]+)'
 
-    # Search for the unit pattern in the normalized address
-    match = re.search(unit_pattern, normalized)
-    if match:
-        unit_identifier = match.group(1)
-        unit_number = match.group(2)
-        return f"{unit_identifier} {unit_number}".strip()
+#     # Search for the unit pattern in the normalized address
+#     match = re.search(unit_pattern, normalized)
+#     if match:
+#         unit_identifier = match.group(1)
+#         unit_number = match.group(2)
+#         return f"{unit_identifier} {unit_number}".strip()
 
-    # Directional suffixes to exclude from being misclassified as unit numbers
-    directionals = {'N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'}
+#     # Directional suffixes to exclude from being misclassified as unit numbers
+#     directionals = {'N', 'S', 'E', 'W', 'NE', 'NW', 'SE', 'SW'}
 
-    # List of street suffixes to exclude
-    street_suffixes = set(street_suffix_mapping.values())
+#     # List of street suffixes to exclude
+#     street_suffixes = set(street_suffix_mapping.values())
 
-    # If no unit identifier is found, check if the last part might be a unit number
-    parts = normalized.split()
-    if len(parts) > 1:
-        last_part = parts[-1]
-        # Check if the last part is a potential unit number containing letters
-        if re.match(r'^[A-Z\d\-]+$', last_part) and re.search(r'[A-Z]', last_part):
-            # Exclude directional suffixes and street suffixes
-            if last_part not in directionals and last_part not in street_suffixes:
-                return last_part
+#     # If no unit identifier is found, check if the last part might be a unit number
+#     parts = normalized.split()
+#     if len(parts) > 1:
+#         last_part = parts[-1]
+#         # Check if the last part is a potential unit number containing letters
+#         if re.match(r'^[A-Z\d\-]+$', last_part) and re.search(r'[A-Z]', last_part):
+#             # Exclude directional suffixes and street suffixes
+#             if last_part not in directionals and last_part not in street_suffixes:
+#                 return last_part
 
-    return None
+#     return None
 
 _direction_mapping = {
     "NORTH": "N",
@@ -405,7 +413,15 @@ def get_unit_info(address):
 
     Ex: 1234 Main Street, Unit 5 -> Unit 5
     """
-    return _extract_unit(parse_address(address))
+    return parse_address(address).get('unitNumber')
+
+def get_unit_info_stripped(address):
+    """
+    Extract the unit number from an address if it exists, and strip the unit identifier.
+
+    Ex: 1234 Main Street, Unit 5 -> 5
+    """
+    return parse_address(address).get('unitNumberStripped')
 
 def get_street_number(address):
     """
