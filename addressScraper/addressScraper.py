@@ -46,9 +46,8 @@ def parse_address(address, warningsEnabled=False):
     i = street_type_pos - 1
     while i >= 0:
         word = words[i]
-        # Match the street number pattern (e.g., '123', '123-4', '123-4A', '123A', but not '5TH', '1ST', '3RD', etc.)
-        # if re.match(r'^\d+(-[A-Z\d]+)?$', word):
-        if re.match(r'^\d+(-[A-Z\d]+)?$', word) or re.match(r'^\d+[A-Z]?$', word):
+        # Match the street number pattern (e.g., '123', '123-4', '123-4A', '123A', '123/125', but not '5TH', '1ST', '3RD', etc.)
+        if re.match(r'^\d+(-[A-Z\d]+)?$', word) or re.match(r'^\d+[A-Z]?$', word) or re.match(r'^\d+/\d+$', word):
             street_number = word
             street_number_pos = i
             # Handle fractional street numbers, adding the next word if it's a fraction
@@ -329,22 +328,22 @@ def _standardize_directions(address, direction_mapping):
     # Apply regex replacement for standalone directions
     return re.sub(direction_pattern, replace_direction, address)
 
+# NOT IN USE - FOR FUTURE IMPLEMENTATION
+# def _replace_street_suffix(address, suffix_mapping):
+#     """
+#     Given an address, replace the street suffix or abbreviation with the USPS standard abbreviation.
+#     """
+#     if not isinstance(address, str):
+#         return address, None
 
-def _replace_street_suffix(address, suffix_mapping):
-    """
-    Given an address, replace the street suffix or abbreviation with the USPS standard abbreviation.
-    """
-    if not isinstance(address, str):
-        return address, None
+#     address_parts = address.strip().upper().split()
+#     for i in range(len(address_parts) - 1, -1, -1):
+#         part = address_parts[i]
+#         if part in suffix_mapping:
+#             address_parts[i] = suffix_mapping[part]
+#             return ' '.join(address_parts), suffix_mapping[part]
 
-    address_parts = address.strip().upper().split()
-    for i in range(len(address_parts) - 1, -1, -1):
-        part = address_parts[i]
-        if part in suffix_mapping:
-            address_parts[i] = suffix_mapping[part]
-            return ' '.join(address_parts), suffix_mapping[part]
-
-    return address, None
+#     return address, None
 
 _formal_direction_mapping = {
     "N": "NORTH",
@@ -396,7 +395,7 @@ def formalize_address(address):
     ]
     formalized_address = ' '.join(formalized_address_parts)
 
-    return formalized_address
+    return formalized_address if formalized_address else None
 
 def normalize_address(address):
     """
